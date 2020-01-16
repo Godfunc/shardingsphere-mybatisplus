@@ -1,0 +1,81 @@
+server:
+  port: 8080
+
+mybatis-plus:
+  global-config:
+    banner: false
+    db-config:
+      id-type: id_worker
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: true
+    call-setters-on-nulls: true
+    jdbc-type-for-null: 'null'
+
+spring:
+  shardingsphere:
+    props:
+      sql:
+        show: true
+    datasource:
+      names: m0,m1
+      m0:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        jdbc-url: jdbc:mysql://192.168.124.61:3306/shardingsphere?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+        username: root
+        password: 123456
+      m1:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        jdbc-url: jdbc:mysql://192.168.124.63:3306/shardingsphere?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+        username: root
+        password: 123456
+    sharding:
+      tables:
+        t_order:
+          # 所有节点
+          actual-data-nodes: m$->{0..1}.t_order_$->{0..1}
+          # 分库策略
+          database-strategy:
+            inline:
+              sharding-column: user_id
+              algorithm-expression: m$->{user_id % 2}
+          # 分表策略
+          table-strategy:
+            inline:
+              sharding-column: id
+              algorithm-expression: t_order_$->{id % 2}
+        t_order_detail:
+          actual-data-nodes: m$->{0..1}.t_order_detail_$->{0..1}
+          database-strategy:
+            inline:
+              sharding-column: user_id
+              algorithm-expression: m$->{user_id % 2}
+          table-strategy:
+            inline:
+              sharding-column: order_id
+              algorithm-expression: t_order_detail_$->{order_id % 2}
+        t_user:
+          actual-data-nodes: m$->{0}.t_user
+          table-strategy:
+            inline:
+              sharding-column: id
+              algorithm-expression: t_user
+      binding-tables:
+        - t_order,t_order_detail # 表绑定
+      broadcast-tables:
+        - t_config # 广播表
+      # 配置默认默认数据库分片策略
+#      default-database-strategy:
+#        inline:
+#          sharding-column: user_id
+#          algorithm-expression: m$->{user_id % 2}
+logging:
+  level:
+    root: info
+    org:
+      springframework:
+        web: debug
+    com:
+      godfunc: debug
